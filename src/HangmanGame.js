@@ -6,33 +6,61 @@ import SingleLetterSearchbar from './SingleLetterSearchBar';
 const pics = ['noose.png', 'upperbody.png', 'upperandlowerbody.png', '1arm.png', 'botharms.png', '1leg.png', 'Dead.png'];
 const words = ["Morehouse", "Spelman", "Basketball", "Table", "Museum", "Excellent", "Fun", "React"];
 
+// API functions
+const updateStats = async (name, won) => {
+  await fetch('http://localhost:4000/api/update', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name, won }),
+  });
+};
+
+const getWinRate = async (name) => {
+  const res = await fetch(`http://localhost:4000/api/winrate/${name}`);
+  const data = await res.json();
+  return data.winRate;
+};
+
+const getLeaderboard = async () => {
+  const res = await fetch(`http://localhost:4000/api/leaderboard`);
+  const data = await res.json();
+  return data;
+};
+
 class HangmanGame extends React.Component {
   state = {
-    curWord: words[Math.floor(Math.random() * words.length)].toUpperCase(), // Store actual word
+    playerName: '',
+    nameSubmitted: false,
+    curWord: '',
     lifeLeft: 6,
     usedLetters: [],
     revealedWord: [],
     gameOver: false,
-    gameWon: false
+    gameWon: false,
+    winRate: null,
+    leaderboard: []
   };
 
-  startNewGame = () => {
+  componentDidMount() {
+    this.prepareNewWord();
+  }
+
+  prepareNewWord = () => {
     const newWord = words[Math.floor(Math.random() * words.length)];
-    console.log("New Word Selected:", newWord, "Type:", typeof newWord); // Debugging Line
     this.setState({
-      curWord: newWord.toUpperCase(),  // Ensure it's a string
+      curWord: newWord.toUpperCase(),
       lifeLeft: 6,
       usedLetters: [],
       revealedWord: Array(newWord.length).fill('_'),
       gameOver: false,
-      gameWon: false
+      gameWon: false,
     });
   };
 
   handleLetterGuess = (letter) => {
     const { curWord, usedLetters, lifeLeft, revealedWord, gameOver } = this.state;
     if (gameOver || usedLetters.includes(letter)) return;
-    
+
     let updatedRevealedWord = [...revealedWord];
     let found = false;
 
@@ -53,27 +81,106 @@ class HangmanGame extends React.Component {
       gameWon,
       gameOver: isGameOver,
       lifeLeft: newLifeLeft,
+    }, () => {
+      if (isGameOver) {
+        const { playerName } = this.state;
+        updateStats(playerName, gameWon);
+
+        getWinRate(playerName).then((rate) => {
+          this.setState({ winRate: rate });
+        });
+
+        getLeaderboard().then((board) => {
+          this.setState({ leaderboard: board });
+        });
+      }
     });
-    
+  };
+
+  handleNameSubmit = (e) => {
+    e.preventDefault();
+    const { playerName } = this.state;
+    if (playerName.trim()) {
+      this.setState({ nameSubmitted: true });
+      getLeaderboard().then((board) => {
+        this.setState({ leaderboard: board });
+      });
+    }
   };
 
   render() {
+    const {
+      playerName, nameSubmitted, revealedWord, usedLetters,
+      gameOver, gameWon, lifeLeft, winRate, leaderboard
+    } = this.state;
+
+    if (!nameSubmitted) {
+      return (
+        <div style={{ textAlign: 'center', paddingTop: '40px' }}>
+          <h2>Enter Your Name to Start</h2>
+          <form onSubmit={this.handleNameSubmit}>
+            <input
+              type="text"
+              value={playerName}
+              onChange={(e) => this.setState({ playerName: e.target.value })}
+              placeholder="Your name"
+              style={{ padding: '10px', fontSize: '16px', marginRight: '10px' }}
+            />
+            <button type="submit" style={{ padding: '10px 20px' }}>
+              Start Game
+            </button>
+          </form>
+        </div>
+      );
+    }
+
     return (
       <div style={{ textAlign: 'center', fontFamily: 'Arial, sans-serif', padding: '20px' }}>
-        <h1 style={{ color: '#333' }}>Hangman Game</h1>
-        <img src={pics[6 - this.state.lifeLeft]} alt="Hangman" style={{ maxWidth: '200px', display: 'block', margin: '0 auto' }} />
-        <p style={{ fontSize: '24px', margin: '20px 0' }}>Word: {this.state.revealedWord.join(' ')}</p>
-        <p style={{ fontSize: '18px', color: '#555' }}>Used Letters: {this.state.usedLetters.join(', ')}</p>
-        {!this.state.gameOver ? (
+        <h1>Hangman Game</h1>
+        <img src={pics[6 - lifeLeft]} alt="Hangman" style={{ maxWidth: '200px', display: 'block', margin: '0 auto' }} />
+        <p style={{ fontSize: '24px', margin: '20px 0' }}>Word: {revealedWord.join(' ')}</p>
+        <p style={{ fontSize: '18px', color: '#555' }}>Used Letters: {usedLetters.join(', ')}</p>
+
+        {!gameOver ? (
           <SingleLetterSearchbar onGuess={this.handleLetterGuess} />
         ) : (
-          <p style={{ fontSize: '20px', fontWeight: 'bold', color: this.state.gameWon ? 'green' : 'red' }}>
-            {this.state.gameWon ? "Congratulations! You won!" : "Game Over! The word was " + this.state.curWord}
-          </p>
+          <>
+            <p style={{ fontSize: '20px', fontWeight: 'bold', color: gameWon ? 'green' : 'red' }}>
+              {gameWon ? "🎉 Congratulations! You won!" : `💀 Game Over! The word was ${this.state.curWord}`}
+            </p>
+            {winRate !== null && (
+              <p style={{ fontSize: '18px' }}>
+                {playerName}'s Win Rate: <strong>{winRate}%</strong>
+              </p>
+            )}
+          </>
         )}
-        <button onClick={this.startNewGame} style={{ marginTop: '20px', padding: '10px 20px', fontSize: '16px', backgroundColor: '#007bff', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer' }}>
-          {this.state.gameOver ? "Play Again" : "New Game"}
+
+        <button onClick={this.prepareNewWord} style={{ marginTop: '20px', padding: '10px 20px', fontSize: '16px' }}>
+          {gameOver ? "Play Again" : "New Game"}
         </button>
+
+        {leaderboard.length > 0 && (
+          <div style={{ marginTop: '40px' }}>
+            <h3>🏆 Leaderboard</h3>
+            <table style={{ margin: '0 auto', fontSize: '16px', borderCollapse: 'collapse' }}>
+              <thead>
+                <tr>
+                  <th style={{ padding: '5px 15px' }}>Name</th>
+                  <th style={{ padding: '5px 15px' }}>Win Rate (%)</th>
+                </tr>
+              </thead>
+              <tbody>
+                {leaderboard.map((p, i) => (
+                  <tr key={i}>
+                    <td style={{ padding: '5px 15px' }}>{p.name}</td>
+                    <td style={{ padding: '5px 15px' }}>{p.winRate}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
     );
   }
