@@ -2,7 +2,7 @@
 
 A full-stack Hangman game built with **React**, **Express**, and **MongoDB** — featuring persistent player stats and a real-time leaderboard.
 
-![screenshot](./src/noose.png)
+![screenshot](./public/noose.png)
 
 ---
 
