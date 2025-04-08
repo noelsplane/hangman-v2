@@ -35,7 +35,7 @@ Follow these steps to get the app running on your machine:
 
 ```bash
 # 1. Clone the repository
-git clone https://github.com/your-username/hangman-v2.git
+git clone https://github.com/noelsplane/hangman-v2.git
 cd hangman-v2
 
 # 2. Install frontend dependencies
