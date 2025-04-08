@@ -50,5 +50,5 @@ npm install
 node server.js
 
 # 5. In a separate terminal, return to root and start React app
-cd ..
+cd hangman-v2
 npm start
