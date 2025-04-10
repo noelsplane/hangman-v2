@@ -4,27 +4,51 @@ import LetterBox from './LetterBox';
 import SingleLetterSearchbar from './SingleLetterSearchBar';
 
 const pics = ['noose.png', 'upperbody.png', 'upperandlowerbody.png', '1arm.png', 'botharms.png', '1leg.png', 'Dead.png'];
+
 const words = ["Morehouse", "Spelman", "Basketball", "Table", "Museum", "Excellent", "Fun", "React"];
 
 // API functions
 const updateStats = async (name, won) => {
-  await fetch('http://localhost:4000/api/update', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ name, won }),
-  });
+  try {
+    const response = await fetch('http://localhost:4000/api/update', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, won }),
+    });
+    if (!response.ok) {
+      throw new Error('Failed to update stats');
+    }
+  } catch (error) {
+    console.error('Error updating stats:', error);
+  }
 };
 
 const getWinRate = async (name) => {
-  const res = await fetch(`http://localhost:4000/api/winrate/${name}`);
-  const data = await res.json();
-  return data.winRate;
+  try {
+    const res = await fetch(`http://localhost:4000/api/winrate/${name}`);
+    if (!res.ok) {
+      throw new Error('Failed to fetch win rate');
+    }
+    const data = await res.json();
+    return data.winRate;
+  } catch (error) {
+    console.error('Error fetching win rate:', error);
+    return null;
+  }
 };
 
 const getLeaderboard = async () => {
-  const res = await fetch(`http://localhost:4000/api/leaderboard`);
-  const data = await res.json();
-  return data;
+  try {
+    const res = await fetch(`http://localhost:4000/api/leaderboard`);
+    if (!res.ok) {
+      throw new Error('Failed to fetch leaderboard');
+    }
+    const data = await res.json();
+    return data;
+  } catch (error) {
+    console.error('Error fetching leaderboard:', error);
+    return [];
+  }
 };
 
 class HangmanGame extends React.Component {
@@ -38,7 +62,9 @@ class HangmanGame extends React.Component {
     gameOver: false,
     gameWon: false,
     winRate: null,
-    leaderboard: []
+    leaderboard: [],
+    isLoading: false,
+    error: null
   };
 
   componentDidMount() {
@@ -65,7 +91,7 @@ class HangmanGame extends React.Component {
     let found = false;
 
     curWord.split('').forEach((char, index) => {
-      if (char.toUpperCase() === letter.toUpperCase()) {
+      if (char === letter) {
         updatedRevealedWord[index] = char;
         found = true;
       }
@@ -81,18 +107,25 @@ class HangmanGame extends React.Component {
       gameWon,
       gameOver: isGameOver,
       lifeLeft: newLifeLeft,
-    }, () => {
+      isLoading: true
+    }, async () => {
       if (isGameOver) {
         const { playerName } = this.state;
-        updateStats(playerName, gameWon);
-
-        getWinRate(playerName).then((rate) => {
-          this.setState({ winRate: rate });
-        });
-
-        getLeaderboard().then((board) => {
-          this.setState({ leaderboard: board });
-        });
+        try {
+          await updateStats(playerName, gameWon);
+          const rate = await getWinRate(playerName);
+          const board = await getLeaderboard();
+          this.setState({ 
+            winRate: rate,
+            leaderboard: board,
+            isLoading: false
+          });
+        } catch (error) {
+          this.setState({ 
+            error: 'Failed to update game stats',
+            isLoading: false
+          });
+        }
       }
     });
   };
@@ -111,7 +144,8 @@ class HangmanGame extends React.Component {
   render() {
     const {
       playerName, nameSubmitted, revealedWord, usedLetters,
-      gameOver, gameWon, lifeLeft, winRate, leaderboard
+      gameOver, gameWon, lifeLeft, winRate, leaderboard,
+      isLoading, error
     } = this.state;
 
     if (!nameSubmitted) {
@@ -137,9 +171,25 @@ class HangmanGame extends React.Component {
     return (
       <div style={{ textAlign: 'center', fontFamily: 'Arial, sans-serif', padding: '20px' }}>
         <h1>Hangman Game</h1>
-        <img src={pics[6 - lifeLeft]} alt="Hangman" style={{ maxWidth: '200px', display: 'block', margin: '0 auto' }} />
-        <p style={{ fontSize: '24px', margin: '20px 0' }}>Word: {revealedWord.join(' ')}</p>
+        <img 
+          src={pics[6 - lifeLeft]} 
+          alt={`Hangman state ${6 - lifeLeft}`} 
+          style={{ maxWidth: '200px', display: 'block', margin: '0 auto' }} 
+        />
+        <div style={{ display: 'flex', justifyContent: 'center', margin: '20px 0' }}>
+          {revealedWord.map((letter, index) => (
+            <LetterBox
+              key={index}
+              letter={letter}
+              isVisible={letter !== '_'}
+            />
+          ))}
+        </div>
         <p style={{ fontSize: '18px', color: '#555' }}>Used Letters: {usedLetters.join(', ')}</p>
+
+        {error && (
+          <p style={{ color: 'red', margin: '10px 0' }}>{error}</p>
+        )}
 
         {!gameOver ? (
           <SingleLetterSearchbar onGuess={this.handleLetterGuess} />
@@ -148,7 +198,9 @@ class HangmanGame extends React.Component {
             <p style={{ fontSize: '20px', fontWeight: 'bold', color: gameWon ? 'green' : 'red' }}>
               {gameWon ? "🎉 Congratulations! You won!" : `💀 Game Over! The word was ${this.state.curWord}`}
             </p>
-            {winRate !== null && (
+            {isLoading ? (
+              <p>Loading stats...</p>
+            ) : winRate !== null && (
               <p style={{ fontSize: '18px' }}>
                 {playerName}'s Win Rate: <strong>{winRate}%</strong>
               </p>
@@ -156,7 +208,11 @@ class HangmanGame extends React.Component {
           </>
         )}
 
-        <button onClick={this.prepareNewWord} style={{ marginTop: '20px', padding: '10px 20px', fontSize: '16px' }}>
+        <button 
+          onClick={this.prepareNewWord} 
+          style={{ marginTop: '20px', padding: '10px 20px', fontSize: '16px' }}
+          disabled={isLoading}
+        >
           {gameOver ? "Play Again" : "New Game"}
         </button>
 

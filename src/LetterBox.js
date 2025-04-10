@@ -1,6 +1,20 @@
 import React from 'react';
+import PropTypes from 'prop-types';
 
 class LetterBox extends React.Component {
+  static propTypes = {
+    letter: PropTypes.string.isRequired,
+    isVisible: PropTypes.bool,
+    boxStyle: PropTypes.object,
+    letterStyle: PropTypes.object
+  };
+
+  static defaultProps = {
+    isVisible: false,
+    boxStyle: {},
+    letterStyle: {}
+  };
+
   render() {
     const { letter, isVisible, boxStyle, letterStyle } = this.props;
 
@@ -13,10 +27,14 @@ class LetterBox extends React.Component {
       alignItems: 'center',
       fontSize: '24px',
       fontWeight: 'bold',
+      margin: '0 5px',
+      borderRadius: '4px',
+      backgroundColor: '#f5f5f5'
     };
 
     const defaultLetterStyle = {
       visibility: isVisible ? 'visible' : 'hidden',
+      color: '#333'
     };
 
     const combinedBoxStyle = { ...defaultBoxStyle, ...boxStyle };
