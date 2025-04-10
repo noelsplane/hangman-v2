@@ -29,26 +29,28 @@ A full-stack Hangman game built with **React**, **Express**, and **MongoDB** —
 
 ---
 
-## How to run it locally: 
-
-Follow these steps to get the app running on your machine:
+### 🧪 Install and Run Everything
 
 ```bash
 # 1. Clone the repository
-git clone https://github.com/noelsplane/hangman-v2.git
+git clone https://github.com/your-username/hangman-v2.git
 cd hangman-v2
 
 # 2. Install frontend dependencies
 npm install
 
-# 3. Start MongoDB using Docker
+# 3. Start Docker Desktop (make sure it’s running before continuing)
+
+# 4. Start MongoDB using Docker
 docker-compose up -d
 
-# 4. Start the backend API server
+# 5. Start the backend server
 cd backend
 npm install
 node server.js
+# Keep this terminal open
 
-# 5. In a separate terminal, return to root and start React app
-cd hangman-v2
+# 6. In a new terminal, return to project root and start React
+cd ..
+npm start
 npm start
