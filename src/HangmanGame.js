@@ -7,7 +7,7 @@ const pics = ['noose.png', 'upperbody.png', 'upperandlowerbody.png', '1arm.png',
 
 const words = ["Morehouse", "Spelman", "Basketball", "Table", "Museum", "Excellent", "Fun", "React"];
 
-// API functions
+
 const updateStats = async (name, won) => {
   try {
     const response = await fetch('http://localhost:4000/api/update', {
