@@ -51,6 +51,6 @@ node server.js
 # Keep this terminal open
 
 # 6. In a new terminal, return to project root and start React
-cd ..
+cd hangman-v2
 npm start
-npm start
+
